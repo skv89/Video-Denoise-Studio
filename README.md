@@ -41,7 +41,7 @@ The exact frozen-source composition is recorded in
 
 The verified portable Windows executable is intended to be distributed as a
 GitHub Release asset, not committed to the source tree. After publication,
-download **Video.Denoise.Studio.exe** from this repository's Releases page and
+download **VideoDenoiseStudio.exe** from this repository's Releases page and
 verify it against [RELEASE_SHA256SUMS.txt](RELEASE_SHA256SUMS.txt).
 
 The executable is currently unsigned, so Windows may show a reputation warning
