@@ -1,0 +1,5 @@
+# Maintained Tk/Tcl native drag-and-drop extension used by the packaged GUI.
+tkinterdnd2==0.6.2 \
+    --hash=sha256:b6a8b229d26286c022bb2fbd311c2e431e4d9bbab8133be80e9c98e7bcf9fe59
+pillow==11.3.0 \
+    --hash=sha256:1a992e86b0dd7aeb1f053cd506508c0999d710a8f07b4c791c63843fc6a807ac

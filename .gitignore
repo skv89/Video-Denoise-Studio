@@ -1,0 +1,50 @@
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Build, packaging, and local verification output
+build/
+dist/
+release*/
+work/
+qa/
+*.spec
+*.log
+
+# Local application settings and processing evidence
+settings.json
+*.Denoise.json
+*.Denoise.log
+*.Denoise.vpy
+*.partial.*
+*.rejected.*
+
+# Video, binary, and downloaded dependency artifacts belong in Releases or local storage
+*.avi
+*.m2ts
+*.m4v
+*.mkv
+*.mov
+*.mp4
+*.mpeg
+*.mpg
+*.ts
+*.vob
+*.webm
+*.dll
+*.exe
+*.pyd
+*.whl
+*.zip
+
+# Editor and operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
