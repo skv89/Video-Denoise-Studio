@@ -494,7 +494,14 @@ class PlannerTests(unittest.TestCase):
 
     def test_qtgmc_quality_plan_is_reproducible_and_double_rate(self) -> None:
         settings = self.settings(backend="vapoursynth_qtgmc")
-        plan = build_plan(settings, media(self.source), report("tff"), capabilities(), run_id="test")
+        # The production scheduler intentionally scales concurrency to the host.
+        # Pin its resource inputs so this reproducibility contract does not
+        # depend on the CPU/RAM allocation of the machine running the suite.
+        with (
+            patch("deinterlace_studio.scheduling.os.cpu_count", return_value=32),
+            patch("deinterlace_studio.scheduling.physical_memory_mib", return_value=98304),
+        ):
+            plan = build_plan(settings, media(self.source), report("tff"), capabilities(), run_id="test")
         self.assertTrue(plan.valid, plan.errors)
         self.assertIn("QTempGaussMC", plan.vapoursynth_script or "")
         self.assertIn("QTempGaussMC.SourceMatchMode.TWICE_REFINED", plan.vapoursynth_script or "")

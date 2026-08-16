@@ -356,6 +356,12 @@ class GuiSmokeTests(unittest.TestCase):
                     root.geometry(f"{app.setup_wide_breakpoint + 160}x1050+0+0")
                     root.update()
                     root.update_idletasks()
+                if app.setup_layout_mode != "wide":
+                    # Hosted Windows runners expose a narrow virtual desktop
+                    # and clamp even explicitly oversized top-level windows.
+                    # Exercise the responsive-layout decision with a simulated
+                    # wide viewport when the display cannot provide one.
+                    app._apply_setup_layout(app.setup_wide_breakpoint + 160)
                 self.assertEqual(
                     app.setup_layout_mode,
                     "wide",
