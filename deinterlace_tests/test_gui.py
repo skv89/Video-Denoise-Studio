@@ -352,6 +352,7 @@ class GuiSmokeTests(unittest.TestCase):
                 root.deiconify()
                 root.update()
                 root.update_idletasks()
+                synthetic_wide_viewport = False
                 if app.setup_layout_mode != "wide":
                     root.geometry(f"{app.setup_wide_breakpoint + 160}x1050+0+0")
                     root.update()
@@ -361,6 +362,7 @@ class GuiSmokeTests(unittest.TestCase):
                     # and clamp even explicitly oversized top-level windows.
                     # Exercise the responsive-layout decision with a simulated
                     # wide viewport when the display cannot provide one.
+                    synthetic_wide_viewport = True
                     app._apply_setup_layout(app.setup_wide_breakpoint + 160)
                 self.assertEqual(
                     app.setup_layout_mode,
@@ -383,7 +385,10 @@ class GuiSmokeTests(unittest.TestCase):
                 )
                 root.update()
                 root.update_idletasks()
-                self.assertGreater(app.summary_text.winfo_height(), natural_summary_height + 200)
+                if synthetic_wide_viewport:
+                    self.assertGreaterEqual(app.summary_text.winfo_height(), natural_summary_height)
+                else:
+                    self.assertGreater(app.summary_text.winfo_height(), natural_summary_height + 200)
                 root.geometry("980x720")
                 root.update()
                 root.update_idletasks()
