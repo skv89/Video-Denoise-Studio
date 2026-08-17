@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 from PIL import Image
 
 from video_denoise_studio.gui import ComparisonViewer, VideoDenoiseStudioApp
-from video_denoise_studio.models import PreviewFrames
+from video_denoise_studio.models import BatchRecord, PreviewFrames
 from video_denoise_studio.timeline import frame_from_timeline_position
 
 from video_denoise_tests.helpers import fake_capabilities, fake_media
@@ -64,7 +64,20 @@ class GuiContractTests(unittest.TestCase):
         self.assertTrue(result["preserved_track_controls_one_row"])
         self.assertTrue(result["container_selector_available"])
         self.assertEqual(result["batch_max_files"], 99)
+        self.assertTrue(result["batch_log_visible"])
+        self.assertGreaterEqual(result["batch_log_preferred_lines"], 7)
+        self.assertTrue(result["batch_log_lower_left"])
+        self.assertTrue(result["batch_selection_guide_compacted"])
         self.assertTrue(result["shared_settings_identity"])
+        self._dispose_app(app)
+
+    def test_batch_log_displays_row_prefixed_diagnostics(self) -> None:
+        app = VideoDenoiseStudioApp(self.root, initial_capabilities=fake_capabilities())
+        record = BatchRecord(Path("example.mp4"))
+        app._batch_event("log", record, "Validation error: exact diagnostic")
+        rendered = app.batch_log.get("1.0", "end")
+        self.assertIn("[example.mp4] Validation error: exact diagnostic", rendered)
+        self.assertEqual(str(app.batch_log.cget("state")), "disabled")
         self._dispose_app(app)
 
     def test_viewer_hold_release_pan_zoom_and_fit(self) -> None:

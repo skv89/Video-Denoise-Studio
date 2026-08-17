@@ -36,6 +36,16 @@ from .vapoursynth_fields import video_denoise_lines
 
 MOV_TEXT_CONVERTIBLE_SUBTITLE_CODECS = ISO_TEXT_CONVERTIBLE_SUBTITLE_CODECS
 MOV_LANGUAGE_ALIASES = {"zh": "chi", "zho": "chi", "cmn": "chi", "yue": "chi"}
+MUXER_OWNED_FORMAT_TAGS = frozenset(
+    {
+        "ENCODER",
+        "DURATION",
+        "MAJOR_BRAND",
+        "MINOR_VERSION",
+        "COMPATIBLE_BRANDS",
+    }
+)
+ISO_BMFF_IDENTITY_TAGS = ("major_brand", "minor_version", "compatible_brands")
 INTERLACED_FIELD_ORDERS = {
     "tt": "tff",
     "tb": "tff",
@@ -96,7 +106,21 @@ def unique_output_path(preferred: Path, reserved: tuple[Path, ...] = ()) -> Path
     reserved_keys = {os.path.normcase(os.path.abspath(path)) for path in reserved}
     candidate = preferred
     counter = 2
-    while candidate.exists() or os.path.normcase(os.path.abspath(candidate)) in reserved_keys:
+
+    def unavailable(path: Path) -> bool:
+        if os.path.normcase(os.path.abspath(path)) in reserved_keys:
+            return True
+        return any(
+            artifact.exists()
+            for artifact in (
+                path,
+                sidecar(path, ".Denoise.log"),
+                sidecar(path, ".Denoise.json"),
+                sidecar(path, ".Denoise.vpy"),
+            )
+        )
+
+    while unavailable(candidate):
         candidate = preferred.with_name(f"{preferred.stem}-{counter}{preferred.suffix}")
         counter += 1
     return candidate
@@ -175,12 +199,30 @@ def _track_mapping(
 
 
 def _metadata_args(settings: DenoiseSettings, source_index: int) -> list[str]:
-    return [
+    args = [
         "-map_metadata",
         str(source_index) if settings.copy_metadata else "-1",
         "-map_chapters",
         str(source_index) if settings.copy_chapters else "-1",
     ]
+    if settings.copy_metadata:
+        # ISO-BMFF identity fields describe the output muxer's structure and
+        # codec brands. Copying the source values creates duplicate/stale MP4
+        # tags in FFmpeg 9 (for example ``isom;isom``) and can advertise AVC
+        # brands on an HEVC output. Let the selected muxer regenerate them.
+        for key in ISO_BMFF_IDENTITY_TAGS:
+            args += ["-metadata", f"{key}="]
+    return args
+
+
+def _expected_format_tags(settings: DenoiseSettings, media: MediaProbe) -> dict[str, str]:
+    if not settings.copy_metadata:
+        return {}
+    return {
+        key: value
+        for key, value in media.format_tags.items()
+        if key.upper() not in MUXER_OWNED_FORMAT_TAGS
+    }
 
 
 def _copied_stream_metadata_args(settings: DenoiseSettings, media: MediaProbe, *, mov: bool) -> list[str]:
@@ -428,11 +470,7 @@ def build_plan(
                 frame_count=media.video.nb_frames,
                 expected_data=_expected_tracks(settings, media, "data", mov=iso_bmff),
                 expected_chapter_count=len(media.chapters) if settings.copy_chapters else 0,
-                expected_format_tags=(
-                    {key: value for key, value in media.format_tags.items() if key.upper() not in {"ENCODER", "DURATION"}}
-                    if settings.copy_metadata
-                    else {}
-                ),
+                expected_format_tags=_expected_format_tags(settings, media),
                 color_range=media.video.color_range,
                 color_space=media.video.color_space,
                 color_transfer=media.video.color_transfer,

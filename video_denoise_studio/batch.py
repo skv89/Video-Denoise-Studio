@@ -13,6 +13,7 @@ from .models import (
     BatchRecord,
     BatchRunOptions,
     BatchRunSummary,
+    DenoiseResult,
     DenoiseSettings,
 )
 from .planner import build_plan, unique_output_path
@@ -163,6 +164,25 @@ class BatchRunner:
             setattr(record, key, value)
         self._emit("row", record)
 
+    def _log(self, message: object, record: BatchRecord | None = None) -> None:
+        self._emit("log", record, str(message))
+
+    @staticmethod
+    def _failure_summary(result: DenoiseResult) -> str:
+        errors = result.validation.errors if result.validation else ()
+        if not errors:
+            return result.message
+        additional = f" (+{len(errors) - 1} more; see Batch run log)" if len(errors) > 1 else ""
+        return f"{result.message} {errors[0]}{additional}"
+
+    def _log_result_artifacts(self, record: BatchRecord, result: DenoiseResult) -> None:
+        if result.log_path:
+            self._log(f"Run log: {result.log_path}", record)
+        if result.report_path:
+            self._log(f"JSON report: {result.report_path}", record)
+        if result.quarantine_path:
+            self._log(f"Rejected output retained for diagnosis: {result.quarantine_path}", record)
+
     @staticmethod
     def _effective(plan, notes: tuple[str, ...]) -> str:
         profile = plan.profile.label if plan.profile else "unresolved output"
@@ -181,6 +201,7 @@ class BatchRunner:
     ):
         self._check_canceled()
         assert capabilities.ffprobe_path
+        self._log("Preflight started.", record)
         self._set_row(record, state="Preflighting", progress_text="Reading media metadata", percent=0.0)
         media = probe_media_cancelable(capabilities.ffprobe_path, record.source_path, self.cancel_event, sample_frames=64)
         record.media = media
@@ -247,6 +268,9 @@ class BatchRunner:
         reserved: list[Path] = []
         ready: list[BatchRecord] = []
         stop = False
+        self._log(
+            f"Batch started with {len(batch_queue.records)} row(s); all rows preflight before sequential processing."
+        )
         self._emit("phase", payload="Preflighting every row before long processing starts")
         try:
             for record in batch_queue.records:
@@ -266,15 +290,21 @@ class BatchRunner:
                     reserved.append(settings.output_path)
                     ready.append(record)
                     self._set_row(record, state="Ready", progress_text="Preflight passed", percent=100.0)
+                    self._log(f"Preflight passed. Output: {settings.output_path}", record)
+                    self._log(f"Effective settings: {record.effective_text}", record)
+                    for note in notes:
+                        self._log(f"Fallback: {note}", record)
                 except ProbeCancelled:
                     raise
                 except Exception as exc:
+                    detail = f"{type(exc).__name__}: {exc}"
                     self._set_row(
                         record,
                         state="Preflight failed",
                         progress_text="Not queued for processing",
-                        error=f"{type(exc).__name__}: {exc}",
+                        error=detail,
                     )
+                    self._log(f"Preflight failed: {detail}", record)
                     if not options.continue_after_error:
                         stop = True
                         break
@@ -291,6 +321,7 @@ class BatchRunner:
                 self._check_canceled()
                 assert record.plan is not None
                 self._set_row(record, state="Processing", progress_text="Starting", percent=0.0)
+                self._log("Processing started.", record)
                 processor = DenoiseProcessor()
                 self.active_processor = processor
 
@@ -307,7 +338,11 @@ class BatchRunner:
                     self._set_row(current, progress_text=phase, percent=percent)
 
                 try:
-                    result = processor.run(record.plan, progress_callback=progress)
+                    result = processor.run(
+                        record.plan,
+                        log_callback=lambda line, current=record: self._log(line, current),
+                        progress_callback=progress,
+                    )
                 finally:
                     self.active_processor = None
                 record.result = result
@@ -315,13 +350,19 @@ class BatchRunner:
                     raise ProbeCancelled("Batch canceled during processing.")
                 if result.success:
                     self._set_row(record, state="Completed", progress_text="Validated", percent=100.0)
+                    self._log(f"Completed, validated, and promoted: {result.output_path}", record)
+                    self._log_result_artifacts(record, result)
                 else:
-                    self._set_row(record, state="Failed", progress_text="Processing failed", error=result.message)
+                    detail = self._failure_summary(result)
+                    self._set_row(record, state="Failed", progress_text="Processing failed", error=detail)
+                    self._log(f"FAILED: {detail}", record)
+                    self._log_result_artifacts(record, result)
                     if not options.continue_after_error:
                         for remaining in ready[index + 1 :]:
                             self._set_row(remaining, state="Skipped", progress_text="Stopped after row failure")
                         break
         except ProbeCancelled:
+            self._log("Batch cancellation requested; active processes and unfinished rows are being closed safely.")
             for record in batch_queue.records:
                 if record.state in {"Queued", "Preflighting", "Ready", "Processing"}:
                     self._set_row(record, state="Canceled", progress_text="Canceled safely")
@@ -334,6 +375,10 @@ class BatchRunner:
             failed=sum(record.state in {"Failed", "Preflight failed"} for record in batch_queue.records),
             canceled=sum(record.state == "Canceled" for record in batch_queue.records),
             skipped=sum(record.state == "Skipped" for record in batch_queue.records),
+        )
+        self._log(
+            f"Batch summary: completed {summary.completed}/{summary.total}; failed {summary.failed}; "
+            f"canceled {summary.canceled}; skipped {summary.skipped}."
         )
         self._emit("complete", payload=summary)
         return summary

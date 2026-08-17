@@ -149,6 +149,50 @@ class PlannerTests(unittest.TestCase):
         self.assertNotEqual(candidate, self.output)
         self.assertFalse(candidate.exists())
 
+    def test_retained_failure_sidecar_forces_a_new_retry_output_name(self) -> None:
+        retained_log = self.output.with_name(self.output.name + ".Denoise.log")
+        retained_log.write_text("previous failed run", encoding="utf-8")
+        candidate = unique_output_path(self.output)
+        self.assertEqual(candidate, self.root / "source.denoised-2.mkv")
+        self.assertFalse(candidate.exists())
+
+    def test_muxer_owned_mp4_identity_tags_are_regenerated_not_strictly_copied(self) -> None:
+        media = replace(
+            fake_media(self.source),
+            format_name="mov,mp4,m4a,3gp,3g2,mj2",
+            format_long_name="QuickTime / MOV",
+            format_tags={
+                "major_brand": "isom",
+                "minor_version": "512",
+                "compatible_brands": "isomiso2avc1mp41",
+                "title": "Preserve this title",
+                "comment": "Preserve this comment",
+                "encoder": "source muxer",
+            },
+        )
+        output = self.root / "source.denoised.mp4"
+        settings = DenoiseSettings(
+            self.source,
+            output,
+            denoiser="ffmpeg_atadenoise",
+            denoise_temporal_radius=2,
+            family="hevc",
+            container="mp4",
+            bit_depth=10,
+            hardware_encode=True,
+        )
+        plan = build_plan(settings, media, self.caps, run_id="mp4-tags")
+        self.assertTrue(plan.valid, plan.errors)
+        self.assertEqual(
+            plan.expected.expected_format_tags,
+            {"title": "Preserve this title", "comment": "Preserve this comment"},
+        )
+        arguments = list(plan.ffmpeg_command)
+        for tag in ("major_brand=", "minor_version=", "compatible_brands="):
+            self.assertIn(tag, arguments)
+            index = arguments.index(tag)
+            self.assertEqual(arguments[index - 1], "-metadata")
+
     def test_mov_incompatible_attachment_falls_back_only_in_batch(self) -> None:
         media = fake_media(self.source)
         attachment = replace(media.streams[1], index=2, codec_type="attachment", codec_name="ttf")

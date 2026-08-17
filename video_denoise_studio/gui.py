@@ -782,10 +782,13 @@ class VideoDenoiseStudioApp:
         shared = ttk.LabelFrame(setup, text="Shared denoise settings (synchronized with Single)")
         shared.grid(row=0, column=0, sticky="nsew", padx=(0, 4))
         shared.columnconfigure(1, weight=1)
+        shared.rowconfigure(3, weight=1)
+        self.batch_denoise_settings_frame = shared
         ttk.Label(shared, text="Denoiser").grid(row=0, column=0, sticky="w", padx=8, pady=(7, 3))
         self.batch_denoiser_combo = ttk.Combobox(shared, textvariable=self.denoiser_var, values=list(DENOISER_LABELS), state="readonly", width=45)
         self.batch_denoiser_combo.grid(row=0, column=1, sticky="ew", padx=(4, 8), pady=(7, 3))
         row = ttk.Frame(shared)
+        self.batch_denoise_values_row = row
         row.grid(row=1, column=0, columnspan=2, sticky="w", padx=8, pady=(3, 7))
         ttk.Label(row, text="Strength").pack(side="left")
         ttk.Spinbox(row, from_=1, to=10, textvariable=self.strength_var, width=5).pack(side="left", padx=(5, 12))
@@ -793,12 +796,24 @@ class VideoDenoiseStudioApp:
         self.batch_radius_spin = ttk.Spinbox(row, from_=1, to=6, textvariable=self.radius_var, width=5)
         self.batch_radius_spin.pack(side="left", padx=(5, 10))
         ttk.Label(row, textvariable=self.window_var, style="Good.TLabel").pack(side="left")
-        ttk.Label(shared, textvariable=self.denoiser_rank_var, style="Muted.TLabel").grid(
-            row=2, column=0, columnspan=2, sticky="w", padx=8, pady=(0, 2)
-        )
+        self.batch_denoiser_rank_label = ttk.Label(row, textvariable=self.denoiser_rank_var, style="Muted.TLabel")
+        self.batch_denoiser_rank_label.pack(side="left", padx=(18, 0))
         ttk.Label(shared, textvariable=self.denoiser_backend_var, wraplength=600, style="Muted.TLabel").grid(
-            row=3, column=0, columnspan=2, sticky="w", padx=8, pady=(0, 7)
+            row=2, column=0, columnspan=2, sticky="w", padx=8, pady=(0, 5)
         )
+
+        self.batch_log_box = ttk.LabelFrame(shared, text="Batch run log")
+        self.batch_log_box.grid(row=3, column=0, columnspan=2, sticky="nsew", padx=8, pady=(2, 7))
+        self.batch_log_box.columnconfigure(0, weight=1)
+        self.batch_log_box.rowconfigure(0, weight=1)
+        self.batch_log = scrolledtext.ScrolledText(
+            self.batch_log_box,
+            height=7,
+            wrap="word",
+            font=("Consolas", 8),
+            state="disabled",
+        )
+        self.batch_log.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
 
         output = ttk.LabelFrame(setup, text="Shared output and destination")
         output.grid(row=0, column=1, sticky="nsew", padx=(4, 0))
@@ -1548,6 +1563,14 @@ class VideoDenoiseStudioApp:
         self.single_log.see("end")
         self.single_log.configure(state="disabled")
 
+    def _append_batch_log(self, line: str) -> None:
+        if not hasattr(self, "batch_log") or self.closing:
+            return
+        self.batch_log.configure(state="normal")
+        self.batch_log.insert("end", str(line).rstrip() + "\n")
+        self.batch_log.see("end")
+        self.batch_log.configure(state="disabled")
+
     def _batch_add_files(self) -> None:
         selected = filedialog.askopenfilenames(parent=self.root, title="Add video files", initialdir=self.saved.get("last_input_dir") or str(Path.home()), filetypes=VIDEO_FILE_TYPES)
         if selected:
@@ -1628,6 +1651,8 @@ class VideoDenoiseStudioApp:
             return
         self._cancel_preview()
         self.busy_batch = True
+        self._append_batch_log("")
+        self._append_batch_log("=== NEW BATCH RUN ===")
         self.batch_start_button.configure(state="disabled")
         self.batch_cancel_button.configure(state="normal")
         runner = BatchRunner(event_callback=lambda kind, record, payload: self.root.after(0, self._batch_event, kind, record, payload))
@@ -1660,6 +1685,9 @@ class VideoDenoiseStudioApp:
             self.batch_tree.see(record.identifier)
         elif kind == "phase" and payload:
             self.batch_status_var.set(str(payload))
+        elif kind == "log" and payload is not None:
+            prefix = f"[{record.source_path.name}] " if record else ""
+            self._append_batch_log(prefix + str(payload))
 
     def _batch_complete(self, summary) -> None:
         if self.closing:
@@ -1671,6 +1699,7 @@ class VideoDenoiseStudioApp:
         self.batch_status_var.set(
             f"Completed {summary.completed}/{summary.total} · failed {summary.failed} · canceled {summary.canceled} · skipped {summary.skipped}"
         )
+        self._append_batch_log(self.batch_status_var.get())
 
     def _batch_failed(self, exc: Exception) -> None:
         if self.closing:
@@ -1680,11 +1709,13 @@ class VideoDenoiseStudioApp:
         self.batch_start_button.configure(state="normal")
         self.batch_cancel_button.configure(state="disabled")
         self.batch_status_var.set(f"Batch failed: {type(exc).__name__}: {exc}")
+        self._append_batch_log(self.batch_status_var.get())
         messagebox.showerror("Batch failed", self.batch_status_var.get(), parent=self.root)
 
     def _cancel_batch(self) -> None:
         if self.batch_runner:
             self.batch_status_var.set("Canceling active preflight or process…")
+            self._append_batch_log(self.batch_status_var.get())
             self.batch_runner.cancel()
 
     def _show_tools_dialog(self) -> None:
@@ -1919,6 +1950,10 @@ class VideoDenoiseStudioApp:
             "container_selector_available": hasattr(self, "container_combo"),
             "batch_max_files": self.batch_queue.maximum,
             "batch_columns": tuple(self.batch_tree["columns"]),
+            "batch_log_visible": hasattr(self, "batch_log"),
+            "batch_log_preferred_lines": int(self.batch_log.cget("height")),
+            "batch_log_lower_left": self.batch_log_box.master is self.batch_denoise_settings_frame,
+            "batch_selection_guide_compacted": self.batch_denoiser_rank_label.master is self.batch_denoise_values_row,
             "shared_settings_identity": self.denoiser_combo.cget("textvariable") == self.batch_denoiser_combo.cget("textvariable"),
             "ffmpeg_found": bool(capabilities and capabilities.ffmpeg_path),
             "ffprobe_found": bool(capabilities and capabilities.ffprobe_path),
