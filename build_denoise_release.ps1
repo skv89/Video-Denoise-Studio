@@ -1,12 +1,12 @@
 param(
     [string]$PythonExecutable = '',
-    [string]$ReleaseDirectory = 'release-denoise-v1.1.3-final'
+    [string]$ReleaseDirectory = 'release-denoise-v1.1.4-final'
 )
 
 $ErrorActionPreference = 'Stop'
 $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ReleasePath = Join-Path $ProjectRoot $ReleaseDirectory
-$WorkPath = Join-Path $ProjectRoot 'work\pyinstaller-denoise-v1.1.3-final'
+$WorkPath = Join-Path $ProjectRoot 'work\pyinstaller-denoise-v1.1.4-final'
 $BuildEnvironment = Join-Path $ProjectRoot 'work\pyinstaller311-env'
 
 if (-not $PythonExecutable) {
@@ -60,7 +60,7 @@ New-Item -ItemType Directory -Path (Join-Path $WorkPath 'userbase') -Force | Out
 $PreviousPythonUserBase = $env:PYTHONUSERBASE
 try {
     $env:PYTHONUSERBASE = Join-Path $WorkPath 'userbase'
-& $PythonExecutable -s -m PyInstaller --noconfirm --clean --onefile --windowed --hidden-import tkinter --hidden-import tkinterdnd2 --collect-all PIL --name 'Video Denoise Studio' --distpath $ReleasePath --workpath $WorkPath --specpath $WorkPath denoise_main.py
+& $PythonExecutable -s -m PyInstaller --noconfirm --clean --onefile --windowed --hidden-import tkinter --hidden-import tkinterdnd2 --collect-all PIL --name 'VideoDenoiseStudio' --distpath $ReleasePath --workpath $WorkPath --specpath $WorkPath denoise_main.py
     if ($LASTEXITCODE -ne 0) {
         throw 'PyInstaller failed; no release was accepted.'
     }
@@ -76,8 +76,17 @@ if (-not (Test-Path -LiteralPath $PillowLicense)) {
     throw "The exact Pillow 11.3.0 combined license was not found: $PillowLicense"
 }
 Copy-Item -LiteralPath $PillowLicense -Destination (Join-Path $ReleasePath 'Pillow and bundled libraries license.txt') -Force
+$ExecutablePath = Join-Path $ReleasePath 'VideoDenoiseStudio.exe'
+$ExecutableHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $ExecutablePath).Hash
+$ChecksumPath = Join-Path $ReleasePath 'RELEASE_SHA256SUMS.txt'
+[System.IO.File]::WriteAllText(
+    $ChecksumPath,
+    "$ExecutableHash *VideoDenoiseStudio.exe`n",
+    [System.Text.UTF8Encoding]::new($false)
+)
 Get-FileHash -Algorithm SHA256 -LiteralPath (
-    (Join-Path $ReleasePath 'Video Denoise Studio.exe'),
+    $ExecutablePath,
+    $ChecksumPath,
     (Join-Path $ReleasePath 'Video Denoise Studio README.md'),
     (Join-Path $ReleasePath 'Video Denoise Studio Third-Party Notices.md'),
     (Join-Path $ReleasePath 'Pillow and bundled libraries license.txt')

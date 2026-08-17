@@ -2,6 +2,24 @@
 
 All notable changes to Video Denoise Studio are documented here.
 
+## 1.1.4
+
+- Fixed false MP4/MOV batch failures caused by treating muxer-generated
+  `major_brand`, `minor_version`, and `compatible_brands` fields as portable
+  user metadata. FFmpeg now regenerates those structural tags while meaningful
+  source metadata remains strictly validated.
+- Made retry naming reserve retained `.Denoise.log`, `.Denoise.json`, and
+  `.Denoise.vpy` sidecars, preventing a previous failed run from forcing an
+  unintended codec fallback.
+- Added a persistent, scrolling Batch run log in the lower-left settings panel
+  with live preflight, encoder, validation, failure, report, and rejected-file
+  diagnostics for every row.
+- Included the first exact validation error directly in failed queue rows while
+  retaining complete details in the visible log and sidecars.
+- Compacted the Batch denoiser panel by placing the quality/speed selection
+  guide on the Strength/radius row beneath the denoiser selector.
+- Standardized the packaged executable filename as `VideoDenoiseStudio.exe`.
+
 ## 1.1.3
 
 - Added exact source-wide timeline seeking and automatic selected-frame
@@ -27,4 +45,3 @@ All notable changes to Video Denoise Studio are documented here.
 - Added automatic preflight before processing and expanded the run-log area.
 - Kept the application separate from Deinterlace Studio and protected the
   shared media/preservation core with its full regression suite.
-

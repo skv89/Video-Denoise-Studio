@@ -1,4 +1,4 @@
-# Video Denoise Studio 1.1.3
+# Video Denoise Studio 1.1.4
 
 Video Denoise Studio is a separate Windows desktop application for temporal
 video denoising. It reuses the proven media-probing, capability, preservation,
@@ -15,7 +15,7 @@ The application has exactly two work areas:
 
 ## Start and tool setup
 
-Run `Video Denoise Studio.exe`. The portable executable is unsigned, so a
+Run `VideoDenoiseStudio.exe`. The portable executable is unsigned, so a
 Windows reputation warning may appear on first launch.
 
 The app invokes, but does not bundle:
@@ -222,12 +222,18 @@ missing, unsupported, and over-capacity entries. It then:
 1. probes and preflights every row before long work starts;
 2. reserves noncolliding output paths;
 3. shows each effective backend, codec, container, destination, and fallback;
-4. processes rows sequentially to bound CPU, GPU, RAM, and VRAM pressure; and
-5. continues or stops after a row error according to the selected option.
+4. streams preflight, encoder, validation, artifact-path, and result details to
+   the scrolling **Batch run log** in the lower-left settings panel;
+5. processes rows sequentially to bound CPU, GPU, RAM, and VRAM pressure; and
+6. continues or stops after a row error according to the selected option.
 
 If hardware is unavailable, Batch can use the matching software profile. If a
 requested delivery profile cannot safely preserve a row, it can fall back to
 16-bit native-chroma FFV1/MKV and records that decision in the row.
+
+The first exact validation problem appears in a failed queue row. The complete
+diagnostic and paths to the retained `.Denoise.log`, `.Denoise.json`, and any
+quarantined output remain visible in the Batch run log.
 
 ## Preservation and interlaced sources
 
@@ -255,6 +261,13 @@ The source can never be its own output. Existing outputs and sidecars are
 never overwritten. Every run encodes a unique hidden partial, validates it,
 atomically promotes it, reopens the exact final file, validates again, and
 computes SHA-256.
+
+MP4/MOV `major_brand`, `minor_version`, and `compatible_brands` are structural
+muxer identity fields, not portable user metadata. The app clears stale source
+values so FFmpeg can regenerate brands appropriate to the new codec and does
+not reject an otherwise correct output merely because these fields changed.
+Titles, comments, chapters, selected tracks, and other meaningful metadata
+remain subject to the normal strict preservation checks.
 
 For `name.ext`, retained evidence is:
 
@@ -288,8 +301,8 @@ never promotes it. A failed created file is quarantined under a unique
 ```
 
 ```powershell
-& 'release-denoise-v1.1.3-final\Video Denoise Studio.exe' --self-test `
-  --self-test-report 'qa\denoise\packaged-selftest-v1.1.3.json' `
+& 'release-denoise-v1.1.4-final\VideoDenoiseStudio.exe' --self-test `
+  --self-test-report 'qa\denoise\packaged-selftest-v1.1.4.json' `
   --ffmpeg 'C:\path\to\ffmpeg.exe' `
   --ffprobe 'C:\path\to\ffprobe.exe' `
   --vspipe 'C:\path\to\vspipe.exe'
@@ -305,8 +318,9 @@ plugins, and NVIDIA components remain external.
 
 ## Release identity
 
-Video Denoise Studio 1.1.3 is a non-overwriting successor to the frozen 1.1.2,
-1.1.1, 1.1.0, and 1.0.0 releases and a separate application from Deinterlace Studio
-1.10.1. Their executables, settings, release directories, and protected source
-checkpoints remain independent. The versioned release manifest records exact
-hashes, tests, integration evidence, and unchanged reference hashes.
+Video Denoise Studio 1.1.4 is a non-overwriting successor to the frozen 1.1.3,
+1.1.2, 1.1.1, 1.1.0, and 1.0.0 releases and a separate application from
+Deinterlace Studio 1.10.1. Their executables, settings, release directories,
+and protected source checkpoints remain independent. The versioned release
+manifest records exact hashes, tests, integration evidence, and unchanged
+reference hashes.

@@ -1,4 +1,21 @@
-# Source provenance for 1.1.3
+# Source provenance
+
+## Version 1.1.4
+
+Video Denoise Studio 1.1.4 derives from the published 1.1.3 repository tree at
+Git commit `6f8017a1bf9496b4d1cd9f87e94baba24ab4779e`. Its authorized change surface
+is limited to Video Denoise Studio's MP4/MOV metadata planning, retry naming,
+Batch diagnostics and layout, focused tests, versioning, documentation, and
+release packaging. The protected Deinterlace Studio 1.10.1 shared core remains
+unchanged.
+
+The two retained 1.1.3 batch-failure reports demonstrated successful FFmpeg
+encodes and exact frame counts followed only by false strict comparisons of
+muxer-owned ISO-BMFF identity tags. Version 1.1.4 makes FFmpeg regenerate those
+tags while continuing to validate meaningful metadata and the complete media
+contract.
+
+## Version 1.1.3 baseline
 
 This repository tree reconstructs the source used by the verified Video
 Denoise Studio 1.1.3 release from two immutable local checkpoints:

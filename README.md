@@ -1,6 +1,6 @@
 # Video Denoise Studio
 
-Video Denoise Studio 1.1.3 is a Windows desktop application dedicated to
+Video Denoise Studio 1.1.4 is a Windows desktop application dedicated to
 temporal video denoising. It combines a source-wide timeline and a Topaz-style
 original/denoised frame comparison with safe single-file and batch processing.
 
@@ -24,7 +24,8 @@ separately maintained Deinterlace Studio 1.10.1 reference base.
   DFTTest2, MVTools, and temporal NLMeans.
 - Select the fastest capability-tested CPU or NVIDIA backend automatically and
   show the effective route in the UI.
-- Process up to 99 queued sources sequentially with automatic preflight.
+- Process up to 99 queued sources sequentially with automatic preflight and a
+  visible per-file Batch run log.
 - Use preservation-oriented FFV1, delivery HEVC/AV1, or ProRes/DNxHR editing
   profiles with codec-aware container and quality controls.
 - Validate a hidden partial before atomic promotion; never overwrite a source

@@ -1,6 +1,6 @@
-# Video Denoise Studio 1.1.1 — Third-Party Notices
+# Video Denoise Studio 1.1.4 — Third-Party Notices
 
-This notice distinguishes components packaged in `Video Denoise Studio.exe`
+This notice distinguishes components packaged in `VideoDenoiseStudio.exe`
 from external video-processing tools that the application invokes by path.
 
 ## Components packaged in the executable
@@ -128,7 +128,7 @@ https://python-pillow.org/
 
 ## External processing tools and plugins (not packaged)
 
-`Video Denoise Studio.exe` does not contain, install, download, modify, or
+`VideoDenoiseStudio.exe` does not contain, install, download, modify, or
 redistribute FFmpeg, FFprobe, VapourSynth, VSPipe, NVIDIA runtimes, or
 VapourSynth denoiser plugins. It invokes binaries selected by the user or read
 from an existing Deinterlace Studio configuration. Those installations retain
