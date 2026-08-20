@@ -46,7 +46,7 @@ _stabilize_windows_tcl_library_paths()
 
 from tkinter import Tk  # noqa: E402
 
-from deinterlace_studio.capabilities import inspect_capabilities  # noqa: E402
+from video_processing_core.runtime.capabilities import inspect_capabilities  # noqa: E402
 from video_denoise_studio import __version__  # noqa: E402
 from video_denoise_studio.gui import VideoDenoiseStudioApp  # noqa: E402
 from video_denoise_studio.models import PreviewRequest  # noqa: E402

@@ -4,14 +4,19 @@ import os
 import subprocess
 from fractions import Fraction
 from pathlib import Path
+from typing import Protocol
 
-from .models import JobSettings, OutputExpectation, StreamInfo, ValidationResult
+from .models import OutputExpectation, StreamInfo, ValidationResult
 from .probe import ProbeError, count_video_packets, probe_frame_samples, probe_media
 from .rationals import derive_dar, fractions_close
 
 
 CREATE_NO_WINDOW = 0x08000000 if os.name == "nt" else 0
 UNSPECIFIED_FRAME_VALUES = {None, "", "unknown", "reserved", "unspecified"}
+
+
+class OutputValidationSettings(Protocol):
+    family: str
 
 
 def _acceptable_pixel_formats(expected: str) -> set[str]:
@@ -110,7 +115,7 @@ def validate_output(
     ffprobe: Path,
     output_path: Path,
     expected: OutputExpectation,
-    settings: JobSettings,
+    settings: OutputValidationSettings,
     *,
     thorough_packet_count: bool = True,
 ) -> ValidationResult:

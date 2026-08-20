@@ -9,15 +9,15 @@ import threading
 import uuid
 from pathlib import Path
 
-from deinterlace_studio.denoise import (
+from video_processing_core.denoise.engine import (
     denoiser_backend_display,
     denoiser_is_vapoursynth,
     ffmpeg_denoise_filter,
     resolve_denoiser_backend,
     vapoursynth_import_lines,
 )
-from deinterlace_studio.dependencies import managed_runtime_environment
-from deinterlace_studio.scheduling import choose_vapoursynth_schedule
+from video_processing_core.runtime.dependencies import managed_runtime_environment
+from video_processing_core.media.scheduling import choose_vapoursynth_schedule
 
 from . import __version__
 from .denoiser_policy import denoiser_control_policy, validate_denoiser_controls

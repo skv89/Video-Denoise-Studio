@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fractions import Fraction
 
-from deinterlace_studio.models import MediaProbe
+from video_processing_core.media.models import MediaProbe
 
 
 def source_fps(media: MediaProbe) -> float:

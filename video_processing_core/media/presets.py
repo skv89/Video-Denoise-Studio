@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from .models import CapabilityReport
@@ -9,9 +10,11 @@ def nvenc_maximum_quality_args(quality: int) -> list[str]:
     """Return the single capability-tested NVENC quality contract used by the app.
 
     ``uhq`` is intentionally used instead of ``hq`` when the selected FFmpeg
-    build exposes it: on current FFmpeg 9/NVIDIA builds it is the stronger
-    quality tune.  Capability discovery runs a real bounded encode with this
-    exact list, so an advertised option is not treated as sufficient proof.
+    build exposes it: on current FFmpeg 9/NVIDIA SDK 13 builds it enables the
+    encoder's Ultra High Quality tools, including internally managed lookahead
+    and temporal filtering.  We therefore do not force an explicit lookahead
+    count. Capability discovery runs a real bounded encode with this exact
+    list, so an advertised option is not treated as sufficient proof.
     """
 
     return [
@@ -27,16 +30,8 @@ def nvenc_maximum_quality_args(quality: int) -> list[str]:
         "0",
         "-multipass",
         "fullres",
-        "-rc-lookahead",
-        "32",
-        "-lookahead_level",
-        "3",
-        "-spatial-aq",
-        "1",
         "-temporal-aq",
         "1",
-        "-aq-strength",
-        "8",
         "-b_ref_mode",
         "middle",
     ]
@@ -416,6 +411,90 @@ PROFILES: dict[str, OutputProfile] = {
 }
 
 
+_FFV1_PIXEL_FORMATS: dict[int, dict[str, str]] = {
+    8: {"420": "yuv420p", "422": "yuv422p", "444": "yuv444p"},
+    10: {"420": "yuv420p10le", "422": "yuv422p10le", "444": "yuv444p10le"},
+    12: {"420": "yuv420p12le", "422": "yuv422p12le", "444": "yuv444p12le"},
+    16: {"420": "yuv420p16le", "422": "yuv422p16le", "444": "yuv444p16le"},
+}
+
+
+def source_matched_ffv1_bit_depth(
+    bits_per_raw_sample: int | None,
+    pix_fmt: str | None,
+) -> int:
+    """Map source precision to an FFV1 storage depth supported by the app.
+
+    FFprobe frequently omits ``bits_per_raw_sample`` for ordinary 8-bit YUV,
+    so the pixel-format name is used as the secondary authority.  The result
+    is deliberately a storage precision, not a claim that processing can
+    recreate precision absent from the source.
+    """
+
+    explicit_depth = bits_per_raw_sample if bits_per_raw_sample and bits_per_raw_sample > 0 else None
+    value = (pix_fmt or "").casefold()
+    packed_depth = {"p010le": 10, "p012le": 12, "p016le": 16}.get(value)
+    match = re.search(r"(9|10|12|14|16)(?:le|be)?$", value)
+    inferred_depth = packed_depth or (int(match.group(1)) if match else (8 if value else None))
+    # A populated FFprobe field and the pixel-format suffix should normally
+    # agree.  If a demuxer reports conflicting metadata, using the larger
+    # value avoids silently reducing the actual decoded sample precision.
+    candidates = tuple(candidate for candidate in (explicit_depth, inferred_depth) if candidate)
+    depth = max(candidates) if candidates else None
+    depth = depth or 8
+    if depth <= 8:
+        return 8
+    if depth <= 10:
+        return 10
+    if depth <= 12:
+        return 12
+    return 16
+
+
+def _install_ffv1_profiles() -> None:
+    chroma_labels = {"420": "4:2:0", "422": "4:2:2", "444": "4:4:4"}
+    for depth, formats in _FFV1_PIXEL_FORMATS.items():
+        for chroma_key, pix_fmt in formats.items():
+            identifier = f"ffv1_intra_{depth}_native_{chroma_key}"
+            chroma = chroma_labels[chroma_key]
+            PROFILES[identifier] = OutputProfile(
+                identifier,
+                f"FFV1 v3 Intra {depth}-bit native {chroma} — mathematically lossless",
+                "ffv1",
+                depth,
+                "ffv1",
+                pix_fmt,
+                ("ffv1",),
+                ".mkv",
+                chroma,
+                True,
+                True,
+                False,
+                f"Archival master preserving {chroma} chroma without derived upsampling; "
+                f"the encoded {depth}-bit processed frames are stored exactly.",
+            )
+        mastering_id = f"ffv1_intra_{depth}"
+        PROFILES[mastering_id] = OutputProfile(
+            mastering_id,
+            f"FFV1 v3 Intra {depth}-bit 4:4:4 mastering — mathematically lossless",
+            "ffv1",
+            depth,
+            "ffv1",
+            formats["444"],
+            ("ffv1",),
+            ".mkv",
+            "4:4:4",
+            True,
+            True,
+            False,
+            "Explicit 4:4:4 mastering/compositing intermediate with every frame intra-coded, "
+            "slices and CRCs; lower-subsampled sources gain no new chroma detail.",
+        )
+
+
+_install_ffv1_profiles()
+
+
 def select_profile(
     family: str,
     bit_depth: int,
@@ -430,16 +509,21 @@ def select_profile(
         implementation = "nvenc" if hardware_encode else ("svt" if av1_software_encoder == "svt" else "libaom")
         key = f"av1_{implementation}_{bit_depth}"
     elif family == "ffv1":
+        if bit_depth not in _FFV1_PIXEL_FORMATS:
+            raise ValueError(
+                f"Unsupported FFV1 storage precision: {bit_depth}-bit. "
+                "Choose source-matched 8/10/12/16-bit output or explicit 16-bit promotion."
+            )
         if ffv1_chroma_mode == "444":
-            key = "ffv1_intra_16"
+            key = f"ffv1_intra_{bit_depth}"
         elif ffv1_chroma_mode == "native":
             value = (source_pix_fmt or "yuv420p").casefold()
             if "420" in value or value in {"nv12", "p010le", "p012le", "p016le"}:
-                key = "ffv1_intra_16_native_420"
+                key = f"ffv1_intra_{bit_depth}_native_420"
             elif "422" in value:
-                key = "ffv1_intra_16_native_422"
+                key = f"ffv1_intra_{bit_depth}_native_422"
             elif "444" in value or value.startswith("gbr"):
-                key = "ffv1_intra_16_native_444"
+                key = f"ffv1_intra_{bit_depth}_native_444"
             else:
                 raise ValueError(
                     f"Native-chroma FFV1 cannot safely classify source pixel format {source_pix_fmt!r}. "
@@ -505,7 +589,7 @@ def selectable_bit_depths(
     """
 
     candidates = {
-        "ffv1": (16,),
+        "ffv1": (8, 10, 12, 16),
         "prores": (10,),
         "hevc": (10, 12),
         "av1": (10, 12),

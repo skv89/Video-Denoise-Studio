@@ -11,8 +11,8 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 
-from deinterlace_studio.dependencies import managed_runtime_environment
-from deinterlace_studio.models import json_safe
+from video_processing_core.runtime.dependencies import managed_runtime_environment
+from video_processing_core.media.models import json_safe
 
 from .models import DenoisePlan, DenoiseResult, LogCallback, ProgressCallback
 from .validation import validate_denoise_output

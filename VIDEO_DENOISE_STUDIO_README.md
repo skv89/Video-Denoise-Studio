@@ -1,10 +1,26 @@
-# Video Denoise Studio 1.1.4
+# Video Denoise Studio 1.2.0
 
 Video Denoise Studio is a separate Windows desktop application for temporal
 video denoising. It reuses the proven media-probing, capability, preservation,
 validation, cancellation, and recovery contracts from Deinterlace Studio
 1.10.1, but it does **not** repair, deinterlace, resize, interpolate, or change
 video cadence.
+
+## What version 1.2.0 changes
+
+Version 1.2.0 makes the validated six-denoiser catalog, parameter applicability,
+CPU/GPU backend selection, FFmpeg/VapourSynth graph construction, media models,
+probing, scheduling, output presets, validation, capability discovery, and
+portable dependency support available through the neutral
+`video_processing_core` package. Deinterlace Studio consumes the same shared
+denoise/media implementation instead of maintaining a diverging copy.
+
+Video Denoise Studio remains standalone and still does not repair or
+deinterlace. Its portable build explicitly excludes repair modules and both
+sibling GUI applications. Existing legacy app-local runtime folders are
+recognized; new local installations use `Video Processing Runtime` beside the
+executable. See `Shared Video Processing Core and Portability.md` in the
+release folder.
 
 The application has exactly two work areas:
 
@@ -301,8 +317,8 @@ never promotes it. A failed created file is quarantined under a unique
 ```
 
 ```powershell
-& 'release-denoise-v1.1.4-final\VideoDenoiseStudio.exe' --self-test `
-  --self-test-report 'qa\denoise\packaged-selftest-v1.1.4.json' `
+& 'release-denoise-v1.2.0-final\VideoDenoiseStudio.exe' --self-test `
+  --self-test-report 'qa\denoise\packaged-selftest-v1.2.0.json' `
   --ffmpeg 'C:\path\to\ffmpeg.exe' `
   --ffprobe 'C:\path\to\ffprobe.exe' `
   --vspipe 'C:\path\to\vspipe.exe'
@@ -318,9 +334,9 @@ plugins, and NVIDIA components remain external.
 
 ## Release identity
 
-Video Denoise Studio 1.1.4 is a non-overwriting successor to the frozen 1.1.3,
-1.1.2, 1.1.1, 1.1.0, and 1.0.0 releases and a separate application from
+Video Denoise Studio 1.2.0 is a non-overwriting successor to the frozen 1.1.4,
+1.1.3, 1.1.2, 1.1.1, 1.1.0, and 1.0.0 releases and a separate application from
 Deinterlace Studio 1.10.1. Their executables, settings, release directories,
 and protected source checkpoints remain independent. The versioned release
-manifest records exact hashes, tests, integration evidence, and unchanged
-reference hashes.
+record identifies the exact source composition, tests, package boundaries,
+and release hash.

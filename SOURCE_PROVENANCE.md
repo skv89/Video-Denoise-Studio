@@ -1,5 +1,36 @@
 # Source provenance
 
+## Version 1.2.0
+
+Video Denoise Studio 1.2.0 combines two independently preserved inputs:
+
+1. the verified 2026-08-17 neutral-core implementation recorded by
+   `SHARED_VIDEO_PROCESSING_CORE_RESUME_STATE.md` and
+   `qa/shared-core-v1/final-release-manifest.json`; and
+2. the complete v1.1.4 corrective changes preserved in local Git commit
+   `e4ba1de9c9564d03fe562c98ae486ff98c082e9f`.
+
+The selected denoise-only v1.2.0 source input contained 45 files and 504,284
+bytes. The SHA-256 of its sorted `hash  relative/path` manifest was
+`5AF0C4E80078D662EA23308C845CF152AB89CE2E9DB2374374D6FC5FD1A18F18`.
+It consists of Video Denoise Studio, its tests and build inputs, plus exactly
+15 `video_processing_core` denoise/media/runtime modules. Repair modules and
+sibling GUI packages are excluded from both this public tree and the portable
+build.
+
+The original shared-core v1.2.0 artifact (SHA-256
+`2AC502144B11AC9A83530AB48EFAC62988B3699D80707ED486BD56FF493A1278`)
+proved the neutral-core architecture and package boundary, but it used the old
+spaced filename and its source snapshot omitted the later v1.1.4 batch fixes.
+It is therefore preserved as provenance evidence, not published as the final
+GitHub v1.2.0 asset. The exact accepted public artifact hash is recorded in
+`RELEASE_SHA256SUMS.txt`.
+
+The carried-forward corrections prevent false MP4/MOV validation failures,
+reserve retained diagnostic sidecars during retry naming, provide the visible
+per-row Batch run log and exact failure detail, compact the Batch settings
+layout, and retain the requested `VideoDenoiseStudio.exe` filename.
+
 ## Version 1.1.4
 
 Video Denoise Studio 1.1.4 derives from the published 1.1.3 repository tree at

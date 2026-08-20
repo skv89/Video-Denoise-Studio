@@ -6,7 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from deinterlace_studio.models import ValidationResult
+from video_processing_core.media.models import ValidationResult
 
 from video_denoise_studio.batch import BatchQueue, BatchRunner
 from video_denoise_studio.models import BatchRunOptions, DenoiseResult, DenoiseSettings

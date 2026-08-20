@@ -6,7 +6,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Iterable
 
-from deinterlace_studio.models import CapabilityReport
+from video_processing_core.media.models import CapabilityReport
 
 from .models import (
     BatchEventCallback,

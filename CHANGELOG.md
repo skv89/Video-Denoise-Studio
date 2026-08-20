@@ -2,6 +2,21 @@
 
 All notable changes to Video Denoise Studio are documented here.
 
+## 1.2.0
+
+- Replaced the legacy embedded Deinterlace Studio shared implementation with
+  the neutral `video_processing_core` denoise, media, and runtime modules.
+- Kept the application and portable executable denoise-only: recursive package
+  inspection rejects repair code and both sibling GUI packages.
+- Preserved standalone portability; no sibling executable, shared installed
+  service, system Python, PATH change, or registry change is required.
+- New optional local tool installations use the sibling `Video Processing
+  Runtime` directory while compatible legacy runtime folders remain readable.
+- Retained every v1.1.4 MP4/MOV validation, retry-sidecar, Batch diagnostic-log,
+  failure-detail, layout, and `VideoDenoiseStudio.exe` correction.
+- Updated CI, source documentation, packaging, provenance, and checksums for
+  the neutral-core source layout.
+
 ## 1.1.4
 
 - Fixed false MP4/MOV batch failures caused by treating muxer-generated

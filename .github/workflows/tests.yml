@@ -28,10 +28,15 @@ jobs:
         run: python -m pip install --disable-pip-version-check --require-hashes -r requirements-denoise-build.txt
 
       - name: Compile source and tests
-        run: python -X dev -W error::ResourceWarning -m compileall -q denoise_main.py deinterlace_main.py video_denoise_studio video_denoise_tests deinterlace_studio deinterlace_tests
+        run: python -X dev -W error::ResourceWarning -m compileall -q denoise_main.py video_denoise_studio video_processing_core video_denoise_tests
 
       - name: Run Video Denoise Studio tests
         run: python -X dev -W error::ResourceWarning -m unittest discover -s video_denoise_tests -v
 
-      - name: Run shared-core regression tests
-        run: python -X dev -W error::ResourceWarning -m unittest discover -s deinterlace_tests -q
+      - name: Verify denoise-only source isolation
+        shell: pwsh
+        run: |
+          if (Test-Path -LiteralPath 'video_processing_core/repair') { throw 'Repair modules must not be published in the denoise-only repository.' }
+          if (Test-Path -LiteralPath 'deinterlace_studio') { throw 'The sibling Deinterlace Studio package must not be published here.' }
+          if (Test-Path -LiteralPath 'video_repair_tool') { throw 'The sibling Video Repair Tool package must not be published here.' }
+          python -c "import sys, video_denoise_studio.gui; bad=[name for name in sys.modules if name.startswith(('video_processing_core.repair','deinterlace_studio','video_repair_tool'))]; assert not bad, bad"

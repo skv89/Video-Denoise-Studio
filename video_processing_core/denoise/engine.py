@@ -53,28 +53,28 @@ DENOISER_SPECS = (
         "vs_bm3d",
         "VapourSynth V-BM3D — two-pass temporal reconstruction (quality-first)",
         "vapoursynth",
-        1,
+        6,
         "two-pass block matching over a centered temporal window",
     ),
     DenoiserSpec(
         "vs_dfttest",
         "VapourSynth DFTTest2 — temporal frequency-domain (adaptive CPU/NVIDIA)",
         "vapoursynth",
-        2,
+        5,
         "frequency-domain filtering over a centered temporal window",
     ),
     DenoiserSpec(
         "vs_mvtools",
         "VapourSynth MVTools degrain — motion-compensated temporal",
         "vapoursynth",
-        3,
+        4,
         "motion-compensated previous/current/next-frame analysis",
     ),
     DenoiserSpec(
         "vs_nlmeans",
         "VapourSynth temporal NLMeans — non-local spatial/temporal matching",
         "vapoursynth",
-        4,
+        3,
         "non-local spatial matching over a centered temporal window",
     ),
 )
@@ -108,24 +108,43 @@ def denoiser_frame_window(identifier: str, temporal_radius: int) -> int:
     return max(5, temporal_radius * 2 + 1) if identifier == "ffmpeg_atadenoise" else temporal_radius * 2 + 1
 
 
-def validate_denoise_numbers(strength: int, temporal_radius: int) -> tuple[str, ...]:
+def validate_denoise_numbers(
+    strength: int,
+    temporal_radius: int,
+    identifier: str | None = None,
+) -> tuple[str, ...]:
     errors: list[str] = []
     if not MIN_DENOISE_STRENGTH <= strength <= MAX_DENOISE_STRENGTH:
         errors.append(
             f"Temporal denoise strength must be a whole number from {MIN_DENOISE_STRENGTH} through "
             f"{MAX_DENOISE_STRENGTH}."
         )
-    if not MIN_TEMPORAL_RADIUS <= temporal_radius <= MAX_TEMPORAL_RADIUS:
-        errors.append(
-            f"Temporal radius must be a whole number from {MIN_TEMPORAL_RADIUS} through {MAX_TEMPORAL_RADIUS}."
-        )
+    minimum = MIN_TEMPORAL_RADIUS
+    maximum = MAX_TEMPORAL_RADIUS
+    if identifier:
+        denoiser_spec(identifier)
+        if identifier == "ffmpeg_fftdnoiz":
+            minimum = maximum = 1
+        elif identifier == "ffmpeg_atadenoise":
+            minimum = 2
+        elif identifier == "vs_dfttest":
+            maximum = 3
+    if not minimum <= temporal_radius <= maximum:
+        if minimum == maximum:
+            errors.append(
+                f"Temporal radius for {denoiser_spec(identifier).label if identifier else 'this denoiser'} "
+                f"is fixed at {minimum}."
+            )
+        else:
+            label = f" for {denoiser_spec(identifier).label}" if identifier else ""
+            errors.append(f"Temporal radius{label} must be a whole number from {minimum} through {maximum}.")
     return tuple(errors)
 
 
 def ffmpeg_denoise_filter(identifier: str, strength: int, temporal_radius: int) -> str:
     """Return a conservative quality-first FFmpeg temporal filter."""
 
-    if validate_denoise_numbers(strength, temporal_radius):
+    if validate_denoise_numbers(strength, temporal_radius, identifier):
         raise ValueError("Invalid temporal denoise strength or radius")
     if identifier == "ffmpeg_fftdnoiz":
         sigma = strength * 0.5
@@ -204,7 +223,7 @@ def vapoursynth_denoise_lines(
 ) -> list[str]:
     """Return graph lines for a resolved, explicitly named VS implementation."""
 
-    if validate_denoise_numbers(strength, temporal_radius):
+    if validate_denoise_numbers(strength, temporal_radius, identifier):
         raise ValueError("Invalid temporal denoise strength or radius")
     if identifier == "vs_bm3d":
         sigma = 0.25 + strength * 0.25

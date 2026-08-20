@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from deinterlace_studio.denoise import (
+from video_processing_core.denoise.engine import (
     MAX_DENOISE_STRENGTH,
     MAX_TEMPORAL_RADIUS,
     MIN_DENOISE_STRENGTH,
@@ -13,7 +13,7 @@ from deinterlace_studio.denoise import (
     denoiser_spec,
     resolve_denoiser_backend,
 )
-from deinterlace_studio.models import CapabilityReport
+from video_processing_core.media.models import CapabilityReport
 
 
 @dataclass(frozen=True)

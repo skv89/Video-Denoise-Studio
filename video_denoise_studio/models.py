@@ -5,14 +5,14 @@ from pathlib import Path
 from typing import Callable
 import uuid
 
-from deinterlace_studio.models import (
+from video_processing_core.media.models import (
     CapabilityReport,
     MediaProbe,
     OutputExpectation,
     ValidationResult,
 )
-from deinterlace_studio.presets import OutputProfile
-from deinterlace_studio.scheduling import VapourSynthSchedule
+from video_processing_core.media.presets import OutputProfile
+from video_processing_core.media.scheduling import VapourSynthSchedule
 
 
 @dataclass(frozen=True)

@@ -6,8 +6,8 @@ import subprocess
 import threading
 from pathlib import Path
 
-from deinterlace_studio.models import MediaProbe
-from deinterlace_studio.probe import ProbeError, parse_probe_json
+from video_processing_core.media.models import MediaProbe
+from video_processing_core.media.probe import ProbeError, parse_probe_json
 
 
 CREATE_NO_WINDOW = 0x08000000 if os.name == "nt" else 0
@@ -114,4 +114,3 @@ def probe_media_cancelable(
         if isinstance(raw_frames, list):
             frame_flags = [item for item in raw_frames if isinstance(item, dict)]
     return parse_probe_json(path, main, frame_flags)
-

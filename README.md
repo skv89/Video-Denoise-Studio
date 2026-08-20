@@ -1,13 +1,25 @@
 # Video Denoise Studio
 
-Video Denoise Studio 1.1.4 is a Windows desktop application dedicated to
+Video Denoise Studio 1.2.0 is a Windows desktop application dedicated to
 temporal video denoising. It combines a source-wide timeline and a Topaz-style
 original/denoised frame comparison with safe single-file and batch processing.
 
 The app does not deinterlace, resize, interpolate, repair, or change cadence.
-Its `deinterlace_studio` package is an internal shared media, capability,
-preservation, validation, cancellation, and recovery core inherited from the
-separately maintained Deinterlace Studio 1.10.1 reference base.
+Version 1.2.0 uses the neutral `video_processing_core` source package for its
+denoise, media, capability, preservation, validation, cancellation, and
+recovery contracts. The public tree and packaged executable include only the
+15 denoise/media/runtime modules the app uses—no repair engine or sibling GUI.
+
+## What changed in 1.2.0
+
+- Moved validated denoiser and media-pipeline behavior into a neutral shared
+  source package without introducing an installed service or sibling-app
+  dependency.
+- Kept the v1.1.4 MP4/MOV metadata correction, retry-sidecar reservation,
+  lower-left Batch run log, detailed row failures, and compact
+  `VideoDenoiseStudio.exe` filename.
+- Added build-time recursive package inspection that rejects repair or sibling
+  modules and proves the shared denoise engine is embedded.
 
 ## Highlights
 
@@ -35,6 +47,8 @@ The complete operating guide, denoiser parameter mappings, quality/speed
 selection guide, codec/container matrix, NVENC P7/UHQ contract, limitations,
 and preservation behavior are in
 [VIDEO_DENOISE_STUDIO_README.md](VIDEO_DENOISE_STUDIO_README.md).
+The shared-source and standalone-portability boundary is documented in
+[SHARED_VIDEO_PROCESSING_CORE.md](SHARED_VIDEO_PROCESSING_CORE.md).
 The exact frozen-source composition is recorded in
 [SOURCE_PROVENANCE.md](SOURCE_PROVENANCE.md).
 
@@ -77,13 +91,13 @@ file. The drag-and-drop and Pillow dependencies are hash-pinned.
 ## Test
 
 ```powershell
-& '.\.venv\Scripts\python.exe' -X dev -W error::ResourceWarning -m compileall -q denoise_main.py deinterlace_main.py video_denoise_studio video_denoise_tests deinterlace_studio deinterlace_tests
+& '.\.venv\Scripts\python.exe' -X dev -W error::ResourceWarning -m compileall -q denoise_main.py video_denoise_studio video_processing_core video_denoise_tests
 & '.\.venv\Scripts\python.exe' -X dev -W error::ResourceWarning -m unittest discover -s video_denoise_tests -v
-& '.\.venv\Scripts\python.exe' -X dev -W error::ResourceWarning -m unittest discover -s deinterlace_tests -q
 ```
 
-The protected shared-core regression suite is intentionally included because
-the denoise application depends on those contracts.
+The release build additionally inspects the complete PyInstaller archive and
+fails if the shared denoise engine is missing or any repair/sibling module is
+present.
 
 ## Build the Windows executable
 
@@ -91,8 +105,9 @@ the denoise application depends on those contracts.
 & '.\build_denoise_release.ps1'
 ```
 
-The build script runs compilation and both test suites before packaging with
-PyInstaller. It refuses to overwrite a nonempty versioned release directory.
+The build script runs compilation and the full application suite before
+packaging with PyInstaller. It refuses to overwrite a nonempty versioned
+release directory.
 
 ## Privacy and data handling
 

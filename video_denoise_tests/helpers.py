@@ -3,7 +3,7 @@ from __future__ import annotations
 from fractions import Fraction
 from pathlib import Path
 
-from deinterlace_studio.models import CapabilityReport, MediaProbe, StreamInfo
+from video_processing_core.media.models import CapabilityReport, MediaProbe, StreamInfo
 
 
 def fake_capabilities() -> CapabilityReport:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from deinterlace_studio.denoise import vapoursynth_denoise_lines
+from video_processing_core.denoise.engine import vapoursynth_denoise_lines
 
 
 INTERLACED_FIELD_ORDERS = frozenset({"tff", "bff"})
@@ -61,4 +61,3 @@ def video_denoise_lines(
         f"{clip_variable} = core.std.SelectEvery({clip_variable}, cycle=2, offsets=0)",
         f"{clip_variable} = core.std.SetFieldBased({clip_variable}, value={2 if tff else 1})",
     ]
-

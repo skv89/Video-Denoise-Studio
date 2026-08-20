@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
-from deinterlace_studio.models import MediaProbe
-from deinterlace_studio.presets import OutputProfile, select_profile
+from video_processing_core.media.models import MediaProbe
+from video_processing_core.media.presets import OutputProfile, select_profile
 
 if TYPE_CHECKING:
     from .models import DenoiseSettings

@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 
-from deinterlace_studio.models import MediaProbe, ValidationResult
-from deinterlace_studio.validation import validate_output
+from video_processing_core.media.models import MediaProbe, ValidationResult
+from video_processing_core.media.validation import validate_output
 
 from .models import DenoisePlan
 from .planner import source_field_order, source_is_interlaced
@@ -63,4 +63,3 @@ def validate_denoise_output(
                     f"{wanted.upper()}."
                 )
     return replace(base, valid=not errors, errors=tuple(errors), warnings=tuple(dict.fromkeys(warnings)))
-

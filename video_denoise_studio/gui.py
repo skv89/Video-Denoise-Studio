@@ -18,17 +18,17 @@ from tkinter import (
 )
 from PIL import Image, ImageTk
 
-from deinterlace_studio.capabilities import inspect_capabilities
-from deinterlace_studio.denoise import (
+from video_processing_core.runtime.capabilities import inspect_capabilities
+from video_processing_core.denoise.engine import (
     DENOISER_SPECS,
     MAX_DENOISE_STRENGTH,
     MAX_TEMPORAL_RADIUS,
     MIN_DENOISE_STRENGTH,
     MIN_TEMPORAL_RADIUS,
 )
-from deinterlace_studio.models import CapabilityReport, MediaProbe
-from deinterlace_studio.presets import selectable_bit_depths
-from deinterlace_studio.windows_drop import FileDropUnavailable, WindowsFileDropTarget
+from video_processing_core.media.models import CapabilityReport, MediaProbe
+from video_processing_core.media.presets import selectable_bit_depths
+from video_processing_core.runtime.windows_drop import FileDropUnavailable, WindowsFileDropTarget
 
 from . import __version__
 from .batch import BatchQueue, BatchRunner

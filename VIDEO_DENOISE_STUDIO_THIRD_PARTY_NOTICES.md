@@ -1,4 +1,4 @@
-# Video Denoise Studio 1.1.4 — Third-Party Notices
+# Video Denoise Studio 1.2.0 — Third-Party Notices
 
 This notice distinguishes components packaged in `VideoDenoiseStudio.exe`
 from external video-processing tools that the application invokes by path.

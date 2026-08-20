@@ -22,12 +22,17 @@ from typing import Callable, Iterable
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
-from . import __version__
-from .models import CapabilityReport
-from .tool_versions import assess_ffmpeg_pair_versions
+from .. import __version__
+from ..media.models import CapabilityReport
+from ..media.tool_versions import assess_ffmpeg_pair_versions
 
 
-RUNTIME_DIRECTORY_NAME = "Deinterlace Studio Runtime"
+RUNTIME_DIRECTORY_NAME = "Video Processing Runtime"
+LEGACY_RUNTIME_DIRECTORY_NAMES = (
+    "Deinterlace Studio Runtime",
+    "Video Repair Tool Runtime",
+    "Video Denoise Studio Runtime",
+)
 GITHUB_FFMPEG_LATEST = "https://api.github.com/repos/GyanD/codexffmpeg/releases/latest"
 GITHUB_VAPOURSYNTH_LATEST = "https://api.github.com/repos/vapoursynth/vapoursynth/releases/latest"
 PYTHON_FTP_INDEX = "https://www.python.org/ftp/python/"
@@ -96,11 +101,27 @@ class DependencyInstallResult:
 def application_directory() -> Path:
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
-    return Path(__file__).resolve().parents[1]
+    # ``dependencies.py`` lives one level deeper than the historical
+    # application-local modules.  Source launches must still place/read the
+    # portable runtime beside the entry points, not inside this package.
+    return Path(__file__).resolve().parents[2]
 
 
 def managed_runtime_root(app_directory: Path | None = None) -> Path:
     return (app_directory or application_directory()) / RUNTIME_DIRECTORY_NAME
+
+
+def managed_runtime_roots(app_directory: Path | None = None) -> tuple[Path, ...]:
+    """Return the neutral runtime followed by recognized legacy locations.
+
+    New installs always target :data:`RUNTIME_DIRECTORY_NAME`.  Read-only
+    discovery also recognizes each application's former app-local folder so a
+    portable upgrade does not force users to download the same validated tools
+    again.
+    """
+
+    app = app_directory or application_directory()
+    return (managed_runtime_root(app),) + tuple(app / name for name in LEGACY_RUNTIME_DIRECTORY_NAMES)
 
 
 def _is_relative_to(path: Path, parent: Path) -> bool:
@@ -139,17 +160,20 @@ def _resolve_manifest_file(root: Path, value: object) -> Path | None:
 
 
 def active_managed_binary(name: str, app_directory: Path | None = None) -> Path | None:
-    root = managed_runtime_root(app_directory)
-    payload = _read_active_manifest(root)
-    components = payload.get("components")
-    if not isinstance(components, dict):
-        return None
     key = name.lower().removesuffix(".exe")
     component_name = "vapoursynth" if key == "vspipe" else "ffmpeg"
-    component = components.get(component_name)
-    if not isinstance(component, dict):
-        return None
-    return _resolve_manifest_file(root, component.get(key))
+    for root in managed_runtime_roots(app_directory):
+        payload = _read_active_manifest(root)
+        components = payload.get("components")
+        if not isinstance(components, dict):
+            continue
+        component = components.get(component_name)
+        if not isinstance(component, dict):
+            continue
+        binary = _resolve_manifest_file(root, component.get(key))
+        if binary is not None:
+            return binary
+    return None
 
 
 def managed_runtime_environment(executable: str | Path, base: dict[str, str] | None = None) -> dict[str, str]:
@@ -229,7 +253,7 @@ def _request(url: str, *, method: str = "GET") -> Request:
         method=method,
         headers={
             "Accept": "application/vnd.github+json, application/json, text/html;q=0.9, */*;q=0.1",
-            "User-Agent": f"Deinterlace-Studio/{__version__}",
+            "User-Agent": f"Video-Processing-Core/{__version__}",
             "X-GitHub-Api-Version": "2022-11-28",
         },
     )

@@ -5,7 +5,7 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 
-from deinterlace_studio.models import StreamInfo
+from video_processing_core.media.models import StreamInfo
 
 from video_denoise_studio.denoiser_policy import (
     denoiser_backend_status,

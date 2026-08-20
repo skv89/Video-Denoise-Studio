@@ -10,17 +10,10 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from .denoise import (
-    DFTTEST_ADAPTIVE_CPU_CUFFT,
-    DFTTEST_ADAPTIVE_CPU_NVRTC,
-    DFTTEST_ADAPTIVE_NVRTC_CUFFT,
-    vapoursynth_denoise_lines,
-    vapoursynth_import_lines,
-)
 from .dependencies import active_managed_binary, managed_runtime_environment
-from .models import CapabilityReport
-from .presets import nvenc_maximum_quality_args
-from .tool_versions import assess_ffmpeg_pair_versions, parse_ffmpeg_library_versions
+from ..media.models import CapabilityReport
+from ..media.presets import nvenc_maximum_quality_args
+from ..media.tool_versions import assess_ffmpeg_pair_versions, parse_ffmpeg_library_versions
 
 
 CREATE_NO_WINDOW = 0x08000000 if os.name == "nt" else 0
@@ -546,6 +539,8 @@ VAPOURSYNTH_DENOISER_CANDIDATES: dict[str, tuple[str, ...]] = {
 
 
 def _vapoursynth_denoiser_script(identifier: str, backend: str) -> str:
+    from ..denoise.engine import vapoursynth_denoise_lines, vapoursynth_import_lines
+
     namespace = {
         "vszipcu": "vszipcu",
         "bm3dcuda_rtc": "bm3dcuda_rtc",
@@ -580,6 +575,12 @@ def _inspect_vapoursynth_denoisers(
     vspipe: Path | None,
 ) -> tuple[dict[str, bool], dict[str, str], dict[str, str]]:
     """Evaluate bounded real graphs and report the exact implementation used."""
+
+    from ..denoise.engine import (
+        DFTTEST_ADAPTIVE_CPU_CUFFT,
+        DFTTEST_ADAPTIVE_CPU_NVRTC,
+        DFTTEST_ADAPTIVE_NVRTC_CUFFT,
+    )
 
     ready = {identifier: False for identifier in VAPOURSYNTH_DENOISER_CANDIDATES}
     backends: dict[str, str] = {}
@@ -905,12 +906,16 @@ def inspect_capabilities(
     ffmpeg_path: str | Path | None = None,
     ffprobe_path: str | Path | None = None,
     vspipe_path: str | Path | None = None,
+    *,
+    feature_profile: str = "full",
 ) -> CapabilityReport:
+    if feature_profile not in {"full", "repair"}:
+        raise ValueError(f"Unsupported capability feature profile: {feature_profile}")
     ffmpeg, ffprobe, ffmpeg_selection_source, ffmpeg_discovery_diagnostics = discover_ffmpeg_toolchain(
         ffmpeg_path,
         ffprobe_path,
     )
-    vspipe = find_binary("vspipe", vspipe_path)
+    vspipe = find_binary("vspipe", vspipe_path) if feature_profile == "full" else None
 
     version = None
     ffprobe_version = None
@@ -969,9 +974,21 @@ def inspect_capabilities(
         ffprobe_libraries=ffprobe_library_versions,
     )
 
-    vs_version, qtgmc_ready, qtgmc_diagnostic, install_command = _inspect_vapoursynth(vspipe)
-    vulkan_nnedi3_ready, vulkan_nnedi3_diagnostic, vulkan_nnedi3_version = _inspect_vulkan_nnedi3(vspipe)
-    vs_denoise_ready, vs_denoise_backends, vs_denoise_diagnostics = _inspect_vapoursynth_denoisers(vspipe)
+    if feature_profile == "full":
+        vs_version, qtgmc_ready, qtgmc_diagnostic, install_command = _inspect_vapoursynth(vspipe)
+        vulkan_nnedi3_ready, vulkan_nnedi3_diagnostic, vulkan_nnedi3_version = _inspect_vulkan_nnedi3(vspipe)
+        vs_denoise_ready, vs_denoise_backends, vs_denoise_diagnostics = _inspect_vapoursynth_denoisers(vspipe)
+    else:
+        vs_version = None
+        qtgmc_ready = False
+        qtgmc_diagnostic = "Not inspected by the repair-only capability profile."
+        install_command = None
+        vulkan_nnedi3_ready = False
+        vulkan_nnedi3_diagnostic = "Not inspected by the repair-only capability profile."
+        vulkan_nnedi3_version = None
+        vs_denoise_ready = {}
+        vs_denoise_backends = {}
+        vs_denoise_diagnostics = {}
     denoise_capabilities = {
         "ffmpeg_fftdnoiz": "fftdnoiz" in filters,
         "ffmpeg_atadenoise": "atadenoise" in filters,

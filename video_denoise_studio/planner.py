@@ -7,7 +7,7 @@ from dataclasses import replace
 from fractions import Fraction
 from pathlib import Path
 
-from deinterlace_studio.denoise import (
+from video_processing_core.denoise.engine import (
     DENOISER_SPECS,
     denoiser_backend_display,
     denoiser_is_vapoursynth,
@@ -16,10 +16,10 @@ from deinterlace_studio.denoise import (
     resolve_denoiser_backend,
     vapoursynth_import_lines,
 )
-from deinterlace_studio.models import CapabilityReport, MediaProbe, OutputExpectation, StreamInfo
-from deinterlace_studio.presets import OutputProfile, profile_capability_error
-from deinterlace_studio.rationals import derive_dar
-from deinterlace_studio.scheduling import choose_vapoursynth_schedule
+from video_processing_core.media.models import CapabilityReport, MediaProbe, OutputExpectation, StreamInfo
+from video_processing_core.media.presets import OutputProfile, profile_capability_error
+from video_processing_core.media.rationals import derive_dar
+from video_processing_core.media.scheduling import choose_vapoursynth_schedule
 
 from . import __version__
 from .denoiser_policy import denoiser_control_policy, validate_denoiser_controls
@@ -208,8 +208,8 @@ def _metadata_args(settings: DenoiseSettings, source_index: int) -> list[str]:
     if settings.copy_metadata:
         # ISO-BMFF identity fields describe the output muxer's structure and
         # codec brands. Copying the source values creates duplicate/stale MP4
-        # tags in FFmpeg 9 (for example ``isom;isom``) and can advertise AVC
-        # brands on an HEVC output. Let the selected muxer regenerate them.
+        # tags in FFmpeg 9 and can advertise AVC brands on an HEVC output.
+        # Let the selected output muxer regenerate them.
         for key in ISO_BMFF_IDENTITY_TAGS:
             args += ["-metadata", f"{key}="]
     return args
